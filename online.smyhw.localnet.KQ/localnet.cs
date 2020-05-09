@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections;
 
 namespace online.smyhw.localnet.KQ.Code
 {
@@ -144,7 +145,7 @@ namespace online.smyhw.localnet.KQ.Code
             {
                 s.Connect(IP, Port);//建立连接
                 Sdata.log.Warning("线程", "连接到localnet端：" + this.receive());//接受对方ID
-                this.send("&" + ID);//发送自身ID
+                this.sendData("auth" ,ID);//发送自身ID
             }
             catch (Exception ee)
             {
@@ -162,6 +163,28 @@ namespace online.smyhw.localnet.KQ.Code
          */
         public void send(String input)
         {
+            sendData("message", input);
+        }
+
+        public void sendData(String type, String input)
+        {
+            input = Json.Encoded(input);
+            switch(type)
+            {
+                case "message":
+                    input = "{type:message,message:" + input + "}";
+                    break;
+                case "cmd":
+                    input = "{type:command,CmdText:" + input + "}";
+                    break;
+                case "connect":
+                    input = "{type:connect,operation:" + input + "}";
+                    break;
+                case "auth":
+                    input = "{type:auth,ID:" + input + "}";
+                    break;
+            }
+            
             Byte[] js = Encoding.UTF8.GetBytes(input);
             Byte[] f_msg = Encoding.UTF8.GetBytes(js.Length + "|" + input);
             s.Send(f_msg);
@@ -216,13 +239,24 @@ namespace online.smyhw.localnet.KQ.Code
                 while (true)
                 {
                     String redata = receive();
-                    if (redata.StartsWith("#"))//分离心跳包
+
+                    if (redata.Equals("{type:connect,operation:xt}"))//分离心跳包
                     {
-                        this.send("#xt");//返回心跳包
+                        this.sendData("connect", "xt");//返回心跳包
                         continue;
                     }
-                    if (redata.StartsWith("*")) { redata = redata.Substring(1); }//除去标识符
-                    Sdata.APIII.SendGroupMessage(this.QQ, redata);//发送消息至QQ群
+                    Hashtable data = Json.Parse(redata);
+                    if (data["type"].Equals("message"))
+                    {
+                        Sdata.APIII.SendGroupMessage(this.QQ, "[核心]:" + data["message"]);//发送消息至QQ群
+                        continue;
+                    }
+                    if (data["type"].Equals("forward_message"))
+                    {
+                        Sdata.APIII.SendGroupMessage(this.QQ, "["+data["From"]+"]:" + data["message"]);//发送消息至QQ群
+                        continue;
+                    }
+                    
                 }
             }
             catch (Exception ee)
@@ -245,3 +279,149 @@ namespace online.smyhw.localnet.KQ.Code
         }
     }
 }
+
+
+/**
+ * 该类被设计为处理标准Json信息</br>
+ * 
+ * @author smyhw
+ */
+public class Json
+{
+
+    public static Hashtable Parse(String input)
+    {
+        Hashtable re = new Hashtable();
+        if (!input.StartsWith("{")) { return null; };
+        input = input.Substring(1);
+        input = input.Substring(0, input.Length - 1);
+        char[] str = input.ToCharArray();
+        String key = "", value = "";
+        int type = 0;
+        for (int i = 0; i < str.Length; i++)
+        {
+            if (type == 0)
+            {
+                if (str[i] == ':' && str[i - 1] != '\\') { type = 1; }
+                else { key = key + str[i]; }
+            }
+            else
+            {
+                if (str[i] == ',' && str[i - 1] != '\\')
+                {
+                    type = 0;
+                    key = Decoded(key);
+                    value = Decoded(value);
+                    re.Add(key, value);
+                    key = "";
+                    value = "";
+                }
+                else { value = value + str[i]; }
+            }
+        }
+        key = Decoded(key);
+        value = Decoded(value);
+        re.Add(key, value);
+        //		message.show(re.toString());
+        return re;
+    }
+
+    public static String Create(Hashtable input)
+    {
+        String re = "{";
+        foreach (string key1 in input.Keys)
+        {
+            string value = (string)input[key1];
+            string key = key1;
+            key = Encoded(key);
+            value = Encoded(value);
+            re = re + key + ":" + value + ",";
+        }
+        re = re.Substring(0, re.Length - 1);
+        re = re + "}";
+        return re;
+    }
+
+
+
+    /**
+	 * 用于转义特殊字符</br>
+	 * Json的6大构造字符：</br>
+	 * begin-array = ws %x5B ws ; [ 左方括号</br>
+	 * begin-object = ws %x7B ws ; { 左大括号</br>
+	 * end-array = ws %x5D ws ; ] 右方括号</br>
+	 * end-object = ws %x7D ws ; } 右大括号</br>
+	 * name-separator = ws %x3A ws ; : 冒号</br>
+	 * value-separator = ws %x2C ws ; , 逗号</br>
+	 * 以及转义字符“\”(反斜杠)</br>
+	 * 都会被转义</br>
+	 * @param input 未转义的字符串
+	 * @return 转义后的字符串
+	 */
+    public static String Encoded(String input)
+    {
+        //		message.info("en++"+input);
+        char[] str = input.ToCharArray();
+        ArrayList out_str = new ArrayList();
+        ArrayList key_word = new ArrayList();
+        key_word.Add('{');
+        key_word.Add('}');
+        key_word.Add('[');
+        key_word.Add(']');
+        key_word.Add(',');
+        key_word.Add(':');
+        key_word.Add('\\');
+        for (int i = 0; i < str.Length; i++)
+        {
+            if (key_word.Contains(str[i]))
+            {
+                out_str.Add('\\');
+            }
+            out_str.Add(str[i]);
+        }
+        String re = "";
+        for (int i = 0; i < out_str.Count; i++)
+        {
+            re = re+out_str[i];
+        }
+        //		message.info("en--"+re);
+        return re;
+    }
+
+    /**
+	 * 反转义特殊字符
+	 * @param input
+	 * @return
+	 * @see public static String Encoded(String input)
+	 */
+    public static String Decoded(String input)
+    {
+        //		message.info("de++"+input);
+        char[] str = input.ToCharArray();
+        ArrayList out_str = new ArrayList();
+        ArrayList key_word = new ArrayList();
+        key_word.Add('{');
+        key_word.Add('}');
+        key_word.Add('[');
+        key_word.Add(']');
+        key_word.Add(',');
+        key_word.Add(':');
+        key_word.Add('\\');
+        for (int i = 0; i < str.Count(); i++)
+        {
+            if (str[i] == '\\' && key_word.Contains(str[i + 1]))
+            {
+                i = i + 1;
+            }
+            out_str.Add(str[i]);
+        }
+        String re = "";
+        for (int i = 0; i < out_str.Count; i++)
+        {
+            re = re+out_str[i];
+        }
+        //		message.info("de--"+re);
+        return re;
+    }
+}
+

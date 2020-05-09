@@ -41,9 +41,9 @@ namespace online.smyhw.localnet.KQ.Code
                     return; 
                 }
                 String command_msg = e.Message.Text.Substring(1);
-                command_msg = "/" + command_msg;
+//                command_msg = "/" + command_msg;
                 TCPLK_QQ temp2 = (TCPLK_QQ)Sdata.GroupList[e.FromGroup.Id];
-                temp2.send(command_msg);
+                temp2.sendData("command",command_msg);
                 return;
             }
 
@@ -58,7 +58,7 @@ namespace online.smyhw.localnet.KQ.Code
             String text = e.Message.Text;
             text = text.Replace("\n", " | ");//处理换行
             text = KQlib.CQmsg_re(text,e.FromGroup.Id);//处理CQ码
-            sendMSG = "*"+frome_name + ":" + text;//拼接消息
+            sendMSG = "["+frome_name + "]:" + text;//拼接消息
             //发送消息
             TCPLK_QQ temp1 = (TCPLK_QQ)Sdata.GroupList[e.FromGroup.Id];
             temp1.send(sendMSG);
