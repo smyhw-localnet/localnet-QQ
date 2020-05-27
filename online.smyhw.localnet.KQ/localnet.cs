@@ -172,16 +172,16 @@ namespace online.smyhw.localnet.KQ.Code
             switch(type)
             {
                 case "message":
-                    input = "{type:message,message:" + input + "}";
+                    input = "{\"type\":\"message\",\"message\":\"" + input + "\"}";
                     break;
                 case "cmd":
-                    input = "{type:command,CmdText:" + input + "}";
+                    input = "{\"type\":\"command\",\"CmdText\":\"" + input + "\"}";
                     break;
                 case "connect":
-                    input = "{type:connect,operation:" + input + "}";
+                    input = "{\"type\":\"connect\",\"operation\":\"" + input + "\"}";
                     break;
                 case "auth":
-                    input = "{type:auth,ID:" + input + "}";
+                    input = "{\"type\":\"auth\",\"ID\":\"" + input + "\"}";
                     break;
             }
             
