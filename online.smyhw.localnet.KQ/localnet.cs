@@ -240,7 +240,7 @@ namespace online.smyhw.localnet.KQ.Code
                 {
                     String redata = receive();
 
-                    if (redata.Equals("{type:connect,operation:xt}"))//分离心跳包
+                    if (redata.Equals("{\"type\":\"connect\",\"operation\":\"xt\"}"))//分离心跳包
                     {
                         this.sendData("connect", "xt");//返回心跳包
                         continue;
