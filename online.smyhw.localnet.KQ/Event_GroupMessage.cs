@@ -43,7 +43,7 @@ namespace online.smyhw.localnet.KQ.Code
                 String command_msg = e.Message.Text.Substring(1);
 //                command_msg = "/" + command_msg;
                 TCPLK_QQ temp2 = (TCPLK_QQ)Sdata.GroupList[e.FromGroup.Id];
-                temp2.sendData("command",command_msg);
+                temp2.sendData("cmd",command_msg);
                 return;
             }
 
